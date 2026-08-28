@@ -442,6 +442,18 @@
   </div>
 </header>
 
+<div id="roomBar" style="max-width:980px;margin:16px auto 0;padding:0 20px;">
+  <div style="border:1px solid var(--line);border-radius:5px;background:var(--panel);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:11.5px;">
+    <span id="roomStatus" style="color:var(--ink-dim);">Not shared — progress is only saved in this browser.</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;">
+      <input id="roomCodeInput" placeholder="partner's room code" style="background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:6px 8px;border-radius:3px;font-family:var(--mono);font-size:11px;width:150px;">
+      <button id="joinRoomBtn" class="navbtn">Join room</button>
+      <button id="createRoomBtn" class="navbtn">Create shared room</button>
+      <button id="leaveRoomBtn" class="navbtn" style="display:none;">Leave room</button>
+    </div>
+  </div>
+</div>
+
 <nav id="phaseNav"></nav>
 
 <main id="app">
@@ -449,7 +461,7 @@
 </main>
 
 <footer>
-  <span>Progress saved automatically to your account.</span>
+  <span id="footerNote">Progress saved automatically to this browser.</span>
   <button id="resetBtn">Reset all progress</button>
 </footer>
 
@@ -784,8 +796,100 @@ document.getElementById('overlay').onclick = (e)=>{
 /* ===================== STATE ===================== */
 let state = {}; // key -> true
 const STORE_KEY = "ioi-tracker-state";
+const ROOM_KEY = "ioi-tracker-room";
+const SYNC_BASE = "https://extendsclass.com/api/json-storage/bin";
+let ROOM = localStorage.getItem(ROOM_KEY) || null; // shared bin id, shared between partners
+let syncTimer = null;
 
 function dayKey(pi, wi, di){ return `p${pi}-w${wi}-d${di}`; }
+
+function updateRoomUI(){
+  const status = document.getElementById('roomStatus');
+  const footerNote = document.getElementById('footerNote');
+  const leaveBtn = document.getElementById('leaveRoomBtn');
+  const createBtn = document.getElementById('createRoomBtn');
+  const joinBtn = document.getElementById('joinRoomBtn');
+  const input = document.getElementById('roomCodeInput');
+  if(ROOM){
+    status.innerHTML = `Shared room active — code: <strong style="color:var(--accent)">${ROOM}</strong> (send this to your partner)`;
+    footerNote.textContent = "Progress synced to shared room " + ROOM + ".";
+    leaveBtn.style.display = '';
+    createBtn.style.display = 'none';
+    joinBtn.style.display = 'none';
+    input.style.display = 'none';
+  } else {
+    status.textContent = "Not shared — progress is only saved in this browser.";
+    footerNote.textContent = "Progress saved automatically to this browser.";
+    leaveBtn.style.display = 'none';
+    createBtn.style.display = '';
+    joinBtn.style.display = '';
+    input.style.display = '';
+  }
+}
+
+async function createRoom(){
+  try{
+    const res = await fetch(SYNC_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(state) // seed the room with current local progress
+    });
+    if(!res.ok) throw new Error("create failed: " + res.status);
+    const data = await res.json();
+    if(!data || !data.id) throw new Error("no id returned");
+    ROOM = data.id;
+    localStorage.setItem(ROOM_KEY, ROOM);
+    updateRoomUI();
+    startPolling();
+    alert("Shared room created! Code: " + ROOM + "\n\nSend this code to your study partner so they can click 'Join room' and enter it.");
+  }catch(e){
+    console.error(e);
+    alert("Couldn't create a shared room right now (network issue). Try again in a moment.");
+  }
+}
+
+async function joinRoom(code){
+  code = (code || "").trim();
+  if(!code){ alert("Enter a room code first."); return; }
+  const id = code.includes("/") ? code.split("/").pop() : code;
+  try{
+    const res = await fetch(`${SYNC_BASE}/${id}`);
+    if(!res.ok) throw new Error("room not found: " + res.status);
+    state = await res.json();
+  }catch(e){
+    alert("Couldn't find that room. Double-check the code your partner sent you.");
+    return;
+  }
+  ROOM = id;
+  localStorage.setItem(ROOM_KEY, ROOM);
+  render();
+  updateRoomUI();
+  startPolling();
+}
+
+function leaveRoom(){
+  ROOM = null;
+  localStorage.removeItem(ROOM_KEY);
+  updateRoomUI();
+}
+
+let pollTimer = null;
+function startPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  if(!ROOM) return;
+  pollTimer = setInterval(async ()=>{
+    try{
+      const res = await fetch(`${SYNC_BASE}/${ROOM}`);
+      if(res.status === 200){
+        const remote = await res.json();
+        if(JSON.stringify(remote) !== JSON.stringify(state)){
+          state = remote;
+          render();
+        }
+      }
+    }catch(e){ /* ignore transient errors */ }
+  }, 5000);
+}
 
 function flattenTrackable(){
   // returns array of {pi,wi,di,checkpoint,rest}
@@ -803,6 +907,15 @@ function flattenTrackable(){
 const TRACKABLE = flattenTrackable();
 
 async function loadState(){
+  if(ROOM){
+    try{
+      const res = await fetch(`${SYNC_BASE}/${ROOM}`);
+      if(res.status === 200){
+        state = await res.json();
+        return;
+      }
+    }catch(e){ /* fall through to local */ }
+  }
   try{
     const raw = localStorage.getItem(STORE_KEY);
     if(raw){
@@ -816,7 +929,18 @@ async function saveState(){
   try{
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
   }catch(e){
-    console.error("save failed", e);
+    console.error("local save failed", e);
+  }
+  if(ROOM){
+    try{
+      await fetch(`${SYNC_BASE}/${ROOM}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state)
+      });
+    }catch(e){
+      console.error("room sync failed", e);
+    }
   }
 }
 
@@ -958,10 +1082,16 @@ document.getElementById('resetBtn').onclick = async ()=>{
   render();
 };
 
+document.getElementById('createRoomBtn').onclick = createRoom;
+document.getElementById('joinRoomBtn').onclick = ()=> joinRoom(document.getElementById('roomCodeInput').value);
+document.getElementById('leaveRoomBtn').onclick = leaveRoom;
+
 /* ===================== INIT ===================== */
 (async ()=>{
+  updateRoomUI();
   await loadState();
   render();
+  startPolling();
 })();
 </script>
 </body>
