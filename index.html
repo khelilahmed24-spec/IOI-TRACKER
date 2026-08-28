@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IOI Training Log</title>
+<style>
+  :root{
+    --bg:#0c1210;
+    --panel:#121b18;
+    --panel2:#0f1815;
+    --line:#233129;
+    --ink:#dbe8e1;
+    --ink-dim:#7d938a;
+    --ink-faint:#4a5c53;
+    --accent:#ffb454;
+    --accent-dim:#8a6a3a;
+    --done:#5ec98a;
+    --done-dim:#2c4a3a;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, Menlo, monospace;
+    --serif: "Fraunces", Georgia, serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #16241d 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--mono);
+    font-size:14px;
+    line-height:1.5;
+    padding-bottom:80px;
+  }
+  @font-face{
+    font-family:'Fraunces'; src:local('Georgia');
+  }
+  a{color:inherit;}
+
+  /* ===== Header ===== */
+  header{
+    padding:36px 20px 22px;
+    max-width:980px;
+    margin:0 auto;
+    border-bottom:1px solid var(--line);
+  }
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:.18em;
+    color:var(--accent);
+    text-transform:uppercase;
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:var(--serif);
+    font-weight:600;
+    font-size:clamp(28px,5vw,44px);
+    margin:0 0 8px;
+    letter-spacing:-0.01em;
+  }
+  .sub{
+    color:var(--ink-dim);
+    max-width:56ch;
+    font-size:13px;
+  }
+
+  .stats-row{
+    display:flex;
+    gap:0;
+    margin-top:26px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .stat{
+    flex:1;
+    padding:14px 16px;
+    border-right:1px solid var(--line);
+  }
+  .stat:last-child{border-right:none;}
+  .stat .n{
+    font-family:var(--serif);
+    font-size:26px;
+    color:var(--accent);
+    line-height:1;
+  }
+  .stat .l{
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-top:6px;
+  }
+
+  /* streak grid (signature element) */
+  .streakwrap{
+    margin-top:22px;
+  }
+  .streakwrap .l{
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-bottom:8px;
+  }
+  #streak{
+    display:grid;
+    grid-template-columns:repeat(22,1fr);
+    gap:3px;
+  }
+  .cell{
+    aspect-ratio:1;
+    background:var(--panel2);
+    border:1px solid var(--line);
+    border-radius:2px;
+  }
+  .cell[data-lvl="1"]{background:var(--done-dim);border-color:var(--done-dim);}
+  .cell[data-lvl="2"]{background:#3a7a5c;border-color:#3a7a5c;}
+  .cell[data-lvl="3"]{background:var(--done);border-color:var(--done);}
+
+  /* ===== Nav ===== */
+  nav{
+    max-width:980px;
+    margin:0 auto;
+    padding:18px 20px 0;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .navbtn{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.03em;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--ink-dim);
+    padding:7px 10px;
+    border-radius:3px;
+    cursor:pointer;
+  }
+  .navbtn:hover{color:var(--ink); border-color:var(--ink-faint);}
+  .navbtn.done{color:var(--done); border-color:var(--done-dim);}
+
+  /* ===== Main ===== */
+  main{
+    max-width:980px;
+    margin:0 auto;
+    padding:26px 20px 0;
+  }
+
+  .phase{
+    margin-bottom:10px;
+    border:1px solid var(--line);
+    border-radius:5px;
+    overflow:hidden;
+    background:var(--panel);
+  }
+  .phase-head{
+    padding:16px 18px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    cursor:pointer;
+    user-select:none;
+  }
+  .phase-head:hover{background:var(--panel2);}
+  .phase-title{
+    font-family:var(--serif);
+    font-size:19px;
+    color:var(--ink);
+  }
+  .phase-title .num{color:var(--accent); margin-right:10px; font-family:var(--mono); font-size:13px;}
+  .phase-meta{
+    font-size:11px;
+    color:var(--ink-faint);
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .phase-bar{
+    width:70px;
+    height:4px;
+    background:var(--line);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .phase-bar>i{display:block;height:100%;background:var(--done);}
+  .phase-body{display:none;}
+  .phase.open .phase-body{display:block;}
+  .phase.open .chevron{transform:rotate(90deg);}
+  .chevron{display:inline-block; transition:transform .15s; color:var(--ink-faint); margin-left:8px;}
+
+  .week{
+    border-top:1px solid var(--line);
+    padding:16px 18px 18px;
+  }
+  .week-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .week-title{
+    font-size:12.5px;
+    letter-spacing:.02em;
+    color:var(--ink);
+    font-weight:600;
+  }
+  .week-title .wk{color:var(--accent);}
+  .week-count{font-size:10.5px;color:var(--ink-faint);}
+
+  .days{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:8px;
+  }
+  .day{
+    border:1px solid var(--line);
+    border-radius:4px;
+    background:var(--panel2);
+    padding:10px 11px;
+    transition:border-color .15s, background .15s;
+  }
+  .day.checked{
+    border-color:var(--done-dim);
+    background:linear-gradient(180deg, rgba(94,201,138,.06), transparent);
+  }
+  .day.checkpoint{border-color:var(--accent-dim);}
+  .day.checkpoint.checked{border-color:var(--done-dim);}
+  .day-top{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    cursor:pointer;
+  }
+  .box{
+    width:14px;height:14px;
+    flex:0 0 14px;
+    border:1px solid var(--ink-faint);
+    border-radius:3px;
+    margin-top:1px;
+    position:relative;
+  }
+  .day.checked .box{background:var(--done); border-color:var(--done);}
+  .day.checked .box::after{
+    content:"";
+    position:absolute; left:3px; top:0px;
+    width:4px; height:8px;
+    border:solid var(--panel);
+    border-width:0 2px 2px 0;
+    transform:rotate(45deg);
+  }
+  .day-name{
+    font-size:11.5px;
+    font-weight:600;
+    color:var(--ink);
+    letter-spacing:.02em;
+  }
+  .day.checkpoint .day-name{color:var(--accent);}
+  .day-name small{
+    display:block;
+    font-weight:400;
+    color:var(--ink-faint);
+    font-size:9.5px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    margin-top:2px;
+  }
+  .topics{
+    list-style:none;
+    margin:8px 0 0;
+    padding:0 0 0 22px;
+    font-size:11px;
+    color:var(--ink-dim);
+  }
+  .topics li{
+    position:relative;
+    padding-left:10px;
+    margin-bottom:3px;
+  }
+  .topics li::before{
+    content:"·";
+    position:absolute;
+    left:0;
+    color:var(--ink-faint);
+  }
+  .cp-note{
+    padding-left:22px;
+    font-size:11px;
+    color:var(--ink-dim);
+    font-style:italic;
+    margin-top:6px;
+  }
+
+  footer{
+    max-width:980px;
+    margin:30px auto 0;
+    padding:16px 20px 40px;
+    color:var(--ink-faint);
+    font-size:11px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-top:1px solid var(--line);
+  }
+  #resetBtn{
+    background:none;
+    border:1px solid var(--line);
+    color:var(--ink-faint);
+    font-family:var(--mono);
+    font-size:10.5px;
+    padding:6px 10px;
+    border-radius:3px;
+    cursor:pointer;
+  }
+  #resetBtn:hover{color:#e07a5f; border-color:#e07a5f;}
+
+  #loadstate{
+    max-width:980px;margin:60px auto;padding:0 20px;color:var(--ink-faint);
+    font-size:12px;
+  }
+
+  /* ===== Modal ===== */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(6,10,8,.72);
+    display:none;
+    align-items:flex-start;
+    justify-content:center;
+    padding:6vh 16px;
+    z-index:50;
+    overflow-y:auto;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    max-width:560px;
+    width:100%;
+    padding:22px 22px 20px;
+  }
+  .modal-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:4px;
+  }
+  .modal-title{
+    font-family:var(--serif);
+    font-size:20px;
+    color:var(--ink);
+  }
+  .modal-sub{
+    font-size:11px;
+    color:var(--ink-faint);
+    margin-bottom:16px;
+  }
+  .modal-close{
+    background:none;border:none;color:var(--ink-faint);
+    font-size:18px; cursor:pointer; line-height:1;
+    padding:2px 6px;
+  }
+  .modal-close:hover{color:var(--ink);}
+  .tier{
+    margin-bottom:14px;
+  }
+  .tier-label{
+    font-size:10px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    margin-bottom:7px;
+  }
+  .tier-label.ez{color:var(--done);}
+  .tier-label.med{color:var(--accent);}
+  .tier-label.hard{color:#e07a5f;}
+  .plinks{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .plink{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:9px 11px;
+    background:var(--panel2);
+    border:1px solid var(--line);
+    border-radius:4px;
+    text-decoration:none;
+    color:var(--ink);
+    font-size:12px;
+  }
+  .plink:hover{border-color:var(--ink-faint);}
+  .plink .rating{
+    font-size:10px;
+    color:var(--ink-faint);
+    white-space:nowrap;
+  }
+  .modal-foot{
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+    font-size:11px;
+    color:var(--ink-faint);
+    line-height:1.6;
+  }
+  .modal-foot a{color:var(--accent); text-decoration:none;}
+  .modal-cp{
+    background:var(--panel2);
+    border:1px solid var(--accent-dim);
+    border-radius:4px;
+    padding:10px 12px;
+    font-size:11.5px;
+    color:var(--ink-dim);
+    margin-bottom:14px;
+  }
+  @media (max-width:600px){
+    .days{grid-template-columns:1fr 1fr;}
+    #streak{grid-template-columns:repeat(15,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Competitive Programming — Self-Study Log</div>
+  <h1>22 Weeks to IOI Form</h1>
+  <div class="sub">Six phases, twenty-two weeks, one Saturday checkpoint each. Check off a day when it's actually done — the grid below only fills in from real work.</div>
+
+  <div class="stats-row">
+    <div class="stat"><div class="n" id="statDone">0</div><div class="l">Days logged</div></div>
+    <div class="stat"><div class="n" id="statTotal">—</div><div class="l">Total days</div></div>
+    <div class="stat"><div class="n" id="statPct">0%</div><div class="l">Complete</div></div>
+    <div class="stat"><div class="n" id="statCP">0</div><div class="l">Checkpoints cleared</div></div>
+  </div>
+
+  <div class="streakwrap">
+    <div class="l">154-day map (phase 1 → final boss)</div>
+    <div id="streak"></div>
+  </div>
+</header>
+
+<nav id="phaseNav"></nav>
+
+<main id="app">
+  <div id="loadstate">loading log…</div>
+</main>
+
+<footer>
+  <span>Progress saved automatically to your account.</span>
+  <button id="resetBtn">Reset all progress</button>
+</footer>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="modalTitle">Day</div>
+        <div class="modal-sub" id="modalSub">Suggested practice</div>
+      </div>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div id="modalCpNote"></div>
+    <div class="tier">
+      <div class="tier-label ez">Easy · 3</div>
+      <div class="plinks" id="tierEasy"></div>
+    </div>
+    <div class="tier">
+      <div class="tier-label med">Medium · 2</div>
+      <div class="plinks" id="tierMed"></div>
+    </div>
+    <div class="tier">
+      <div class="tier-label hard">Hard · 2</div>
+      <div class="plinks" id="tierHard"></div>
+    </div>
+    <div class="modal-foot">Links open live Codeforces problemset filters for these tags and ratings, so the actual problem list stays current. Prefer a curated set instead? Try the matching section on <a href="https://cses.fi/problemset/" target="_blank" rel="noopener">CSES Problem Set</a>.</div>
+  </div>
+</div>
+
+<script>
+/* ===================== DATA ===================== */
+// Each phase -> weeks -> days (Mon..Fri normal, Sat checkpoint, Sun rest)
+const PLAN = [
+{ title:"Strong Intermediate Foundation", weeks:[
+  { n:1, title:"Prefix Sums + Difference Arrays", days:[
+    {name:"Monday", topics:["1D prefix sums","Range sum queries","O(1) query after O(n) preprocessing","Solve 3 easy problems"]},
+    {name:"Tuesday", topics:["2D prefix sums","Rectangle queries","Coordinate interpretation"]},
+    {name:"Wednesday", topics:["Difference arrays","Range updates","Prefix sum of differences"]},
+    {name:"Thursday", topics:["Combining prefix sums + frequency arrays","Prefix frequency","Prefix minimum/maximum"]},
+    {name:"Friday", topics:["Mixed problems","Solve 3 problems without looking at solutions"]},
+    {name:"Saturday", checkpoint:"IOI 2004 — \"Hermes\"", note:"Try it seriously. Don't expect to solve it immediately — the point is to feel how IOI problems combine simple observations with DP."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:2, title:"Binary Search", days:[
+    {name:"Monday", topics:["Classical binary search","First/last occurrence","Lower bound / upper bound"]},
+    {name:"Tuesday", topics:["Binary search on answer","Feasibility functions"]},
+    {name:"Wednesday", topics:["Optimization → decision transformation","Minimize maximum","Maximize minimum"]},
+    {name:"Thursday", topics:["Binary search + greedy"]},
+    {name:"Friday", topics:["Difficult binary-search problems","Implement binary search from scratch"]},
+    {name:"Saturday", checkpoint:"IOI 2011 — \"Race\"", note:"Focus especially on recognizing the underlying optimization/search structure."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:3, title:"Sorting + Greedy", days:[
+    {name:"Monday", topics:["Sorting techniques","Custom comparators","Stable vs unstable sorting"]},
+    {name:"Tuesday", topics:["Interval problems","Activity selection","Scheduling"]},
+    {name:"Wednesday", topics:["Exchange arguments","How to prove greedy algorithms"]},
+    {name:"Thursday", topics:["Greedy + sorting"]},
+    {name:"Friday", topics:["Mixed greedy problems"]},
+    {name:"Saturday", checkpoint:"IOI 2007 — \"Sailing\"", note:"Try to derive the greedy/structural ideas yourself."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:4, title:"Two Pointers + Sliding Window", days:[
+    {name:"Monday", topics:["Two pointers","Left/right pointer invariants"]},
+    {name:"Tuesday", topics:["Sliding window","Frequency counting"]},
+    {name:"Wednesday", topics:["Two pointers + sorting"]},
+    {name:"Thursday", topics:["Prefix sums + two pointers"]},
+    {name:"Friday", topics:["Harder two-pointer problems"]},
+    {name:"Saturday", checkpoint:"IOI 2015 — \"Boxes\"", note:"Study the official solution carefully if you can't solve it."},
+    {name:"Sunday", rest:true},
+  ]},
+]},
+{ title:"Core Algorithms", weeks:[
+  { n:5, title:"Recursion + Backtracking", days:[
+    {name:"Monday", topics:["Recursion","Recursive state"]},
+    {name:"Tuesday", topics:["Backtracking","Permutations","Combinations"]},
+    {name:"Wednesday", topics:["Pruning"]},
+    {name:"Thursday", topics:["Bitmask enumeration"]},
+    {name:"Friday", topics:["Meet-in-the-middle introduction"]},
+    {name:"Saturday", checkpoint:"IOI 2014 — \"Game\"", note:"Try to identify the states and recurrence."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:6, title:"Graph Basics", days:[
+    {name:"Monday", topics:["Graph representation","Adjacency lists","Directed/undirected graphs"]},
+    {name:"Tuesday", topics:["BFS"]},
+    {name:"Wednesday", topics:["DFS"]},
+    {name:"Thursday", topics:["Connected components","Bipartite graphs"]},
+    {name:"Friday", topics:["Grid graphs","Flood fill","Graph modeling"]},
+    {name:"Saturday", checkpoint:"IOI 2010 — \"Quality of Checkpoints\"", note:"Focus on graph/state modeling."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:7, title:"Shortest Paths", days:[
+    {name:"Monday", topics:["BFS shortest path"]},
+    {name:"Tuesday", topics:["Dijkstra"]},
+    {name:"Wednesday", topics:["Priority queues","Dijkstra implementation from memory"]},
+    {name:"Thursday", topics:["Bellman-Ford","Negative edges"]},
+    {name:"Friday", topics:["Floyd-Warshall","Choosing the correct shortest-path algorithm"]},
+    {name:"Saturday", checkpoint:"IOI 2012 — \"Ideal City\"", note:"This is where you should start becoming comfortable with multi-step graph reasoning."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:8, title:"MST + DSU", days:[
+    {name:"Monday", topics:["Disjoint Set Union"]},
+    {name:"Tuesday", topics:["Path compression","Union by size/rank"]},
+    {name:"Wednesday", topics:["Kruskal"]},
+    {name:"Thursday", topics:["Prim"]},
+    {name:"Friday", topics:["MST properties","Offline connectivity"]},
+    {name:"Saturday", checkpoint:"IOI 2017 — \"Wiring\"", note:"An excellent transition from standard algorithms toward IOI-style DP/optimization."},
+    {name:"Sunday", rest:true},
+  ]},
+]},
+{ title:"Dynamic Programming", note:"One of the most important phases.", weeks:[
+  { n:9, title:"Classical DP", days:[
+    {name:"Monday", topics:["What is DP?","State / transition / base case"]},
+    {name:"Tuesday", topics:["1D DP"]},
+    {name:"Wednesday", topics:["2D DP"]},
+    {name:"Thursday", topics:["Knapsack"]},
+    {name:"Friday", topics:["LIS","LCS"]},
+    {name:"Saturday", checkpoint:"IOI 2016 — \"Detecting Molecules\""},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:10, title:"DP Optimization", days:[
+    {name:"Monday", topics:["State compression"]},
+    {name:"Tuesday", topics:["Bitmask DP"]},
+    {name:"Wednesday", topics:["Interval DP"]},
+    {name:"Thursday", topics:["Tree DP introduction"]},
+    {name:"Friday", topics:["DP optimization patterns"]},
+    {name:"Saturday", checkpoint:"IOI 2008 — \"Islands\"", note:"Spend a lot of time understanding the official solution."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:11, title:"Tree Algorithms", days:[
+    {name:"Monday", topics:["Rooted trees","Parent/depth"]},
+    {name:"Tuesday", topics:["Tree DFS"]},
+    {name:"Wednesday", topics:["Subtree sizes","Tree DP"]},
+    {name:"Thursday", topics:["Diameter","Tree properties"]},
+    {name:"Friday", topics:["Rerooting DP"]},
+    {name:"Saturday", checkpoint:"IOI 2011 — \"Race\" (revisit)", note:"Solve it again with your new tree knowledge."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:12, title:"Binary Lifting + LCA", days:[
+    {name:"Monday", topics:["Ancestors"]},
+    {name:"Tuesday", topics:["Binary lifting"]},
+    {name:"Wednesday", topics:["LCA"]},
+    {name:"Thursday", topics:["Distance between tree nodes"]},
+    {name:"Friday", topics:["LCA + path queries"]},
+    {name:"Saturday", checkpoint:"IOI 2018 — \"Werewolf\"", note:"A major difficulty jump — don't worry if you cannot solve it."},
+    {name:"Sunday", rest:true},
+  ]},
+]},
+{ title:"Advanced Data Structures", weeks:[
+  { n:13, title:"Fenwick Tree + Segment Tree", days:[
+    {name:"Monday", topics:["Fenwick tree"]},
+    {name:"Tuesday", topics:["Range queries"]},
+    {name:"Wednesday", topics:["Segment tree"]},
+    {name:"Thursday", topics:["Range updates"]},
+    {name:"Friday", topics:["Lazy propagation"]},
+    {name:"Saturday", checkpoint:"IOI 2021 — \"Candies\"", note:"An important checkpoint."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:14, title:"Advanced Segment Trees", days:[
+    {name:"Monday", topics:["Coordinate compression"]},
+    {name:"Tuesday", topics:["Segment tree with custom information"]},
+    {name:"Wednesday", topics:["Merge-sort tree"]},
+    {name:"Thursday", topics:["Persistent segment tree"]},
+    {name:"Friday", topics:["Offline queries"]},
+    {name:"Saturday", checkpoint:"IOI 2019 — \"Split the Attractions\"", note:"Even partial progress is valuable."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:15, title:"Monotonic Structures + Advanced Greedy", days:[
+    {name:"Monday", topics:["Monotonic stack"]},
+    {name:"Tuesday", topics:["Monotonic queue"]},
+    {name:"Wednesday", topics:["Convex hull trick introduction"]},
+    {name:"Thursday", topics:["Li Chao tree"]},
+    {name:"Friday", topics:["DP + CHT"]},
+    {name:"Saturday", checkpoint:"IOI 2005 — \"Mountains\""},
+    {name:"Sunday", rest:true},
+  ]},
+]},
+{ title:"Very Advanced Algorithms", note:"Now things get serious.", weeks:[
+  { n:16, title:"Graph Theory Advanced", days:[
+    {name:"Monday", topics:["Topological sorting"]},
+    {name:"Tuesday", topics:["SCC"]},
+    {name:"Wednesday", topics:["Condensation DAG"]},
+    {name:"Thursday", topics:["Bridges"]},
+    {name:"Friday", topics:["Articulation points"]},
+    {name:"Saturday", checkpoint:"IOI 2008 — \"Type Printer\""},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:17, title:"Flow", days:[
+    {name:"Monday", topics:["Network flow concept"]},
+    {name:"Tuesday", topics:["Ford-Fulkerson"]},
+    {name:"Wednesday", topics:["Edmonds-Karp"]},
+    {name:"Thursday", topics:["Dinic"]},
+    {name:"Friday", topics:["Flow modeling"]},
+    {name:"Saturday", checkpoint:"IOI 2013 — \"Cave\"", note:"The important part is not just max-flow implementation — practice identifying hidden graph structures."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:18, title:"Advanced DP + State Compression", days:[
+    {name:"Monday", topics:["Bitmask DP"]},
+    {name:"Tuesday", topics:["Subset DP"]},
+    {name:"Wednesday", topics:["SOS DP"]},
+    {name:"Thursday", topics:["Divide & conquer DP"]},
+    {name:"Friday", topics:["Knuth optimization / advanced DP ideas"]},
+    {name:"Saturday", checkpoint:"IOI 2009 — \"Regions\""},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:19, title:"String Algorithms", days:[
+    {name:"Monday", topics:["KMP"]},
+    {name:"Tuesday", topics:["Z-function"]},
+    {name:"Wednesday", topics:["Rolling hash"]},
+    {name:"Thursday", topics:["Trie"]},
+    {name:"Friday", topics:["Aho-Corasick"]},
+    {name:"Saturday", checkpoint:"IOI 2008 — \"Type Printer\" (revisit)", note:"Analyze the string/trie ideas much more deeply this time."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:20, title:"Suffix Structures", note:"Deliberately very advanced.", days:[
+    {name:"Monday", topics:["Suffix array"]},
+    {name:"Tuesday", topics:["LCP"]},
+    {name:"Wednesday", topics:["Suffix automaton"]},
+    {name:"Thursday", topics:["Applications of suffix automaton"]},
+    {name:"Friday", topics:["Difficult string problems"]},
+    {name:"Saturday", checkpoint:"IOI 2009 — \"Regions\" (old, no editorial)", note:"Take a difficult old IOI string problem and solve it without looking at the editorial."},
+    {name:"Sunday", rest:true},
+  ]},
+]},
+{ title:"IOI-Level Techniques", weeks:[
+  { n:21, title:"Computational Geometry + Advanced Techniques", days:[
+    {name:"Monday", topics:["Points/vectors","Cross product"]},
+    {name:"Tuesday", topics:["Orientation","Line intersection"]},
+    {name:"Wednesday", topics:["Convex hull"]},
+    {name:"Thursday", topics:["Sweep line"]},
+    {name:"Friday", topics:["Geometry + data structures"]},
+    {name:"Saturday", checkpoint:"IOI 2012 — \"Ideal City\" (contest conditions)", note:"Try to produce a complete solution under contest conditions."},
+    {name:"Sunday", rest:true},
+  ]},
+  { n:22, title:"FINAL BOSS: IOI Problem Solving", note:"Not about learning another algorithm — about learning to solve problems you've never seen.", days:[
+    {name:"Monday", topics:["Take an old IOI problem","5 hours normally — but you only have 2 hours","Spend the entire session solving, no editorial"]},
+    {name:"Tuesday", topics:["Another IOI problem","Focus on: observations, subproblems, constraints, partial solutions"]},
+    {name:"Wednesday", topics:["Another IOI problem","Try to obtain at least a partial score — at IOI you don't always need the complete solution immediately"]},
+    {name:"Thursday", topics:["Take one previously failed IOI problem","Solve it again from scratch, no solution open"]},
+    {name:"Friday", checkpoint:"2-hour simulated IOI session", note:"Pick one IOI problem. Rules: 2 hours, no Google, no editorial, no discussion, submit only what you can derive. Then analyze your performance."},
+    {name:"Saturday", checkpoint:"FINAL CHECKPOINT — Mini IOI", note:"2 hours. Pick 3 old IOI problems of different difficulties. Goal: easy subtasks, partial solutions, observations, brute force, optimized solution."},
+    {name:"Sunday", rest:true, note:"Absolutely nothing. Your brain needs recovery."},
+  ]},
+]},
+];
+
+/* ===================== PROBLEM SUGGESTIONS ===================== */
+// Map each week number to Codeforces tag(s) closest to that week's subject.
+// Links are live problemset filters (tag + rating), not fixed problem IDs,
+// so they always resolve to a real, current list of problems.
+const WEEK_TAGS = {
+  1:  ["implementation","data structures"],
+  2:  ["binary search"],
+  3:  ["greedy","sortings"],
+  4:  ["two pointers"],
+  5:  ["dfs and similar","brute force"],
+  6:  ["graphs"],
+  7:  ["shortest paths"],
+  8:  ["dsu"],
+  9:  ["dp"],
+  10: ["dp","bitmasks"],
+  11: ["trees"],
+  12: ["trees","binary search"],
+  13: ["data structures"],
+  14: ["data structures"],
+  15: ["data structures","greedy"],
+  16: ["dfs and similar","graphs"],
+  17: ["flows"],
+  18: ["dp","bitmasks"],
+  19: ["strings"],
+  20: ["string suffix structures"],
+  21: ["geometry"],
+  22: ["dp","graphs","greedy"],
+};
+
+function cfLink(tags, rating){
+  const primary = tags[0];
+  const tagParam = encodeURIComponent(primary) + "," + rating;
+  return `https://codeforces.com/problemset?tags=${tagParam}`;
+}
+
+function buildSuggestions(weekN){
+  const tags = WEEK_TAGS[weekN] || ["implementation"];
+  const label = tags.join(" / ");
+  const easyRatings = [800, 900, 1100];
+  const medRatings  = [1300, 1500];
+  const hardRatings = [1800, 2100];
+  return {
+    label,
+    easy: easyRatings.map(r => ({rating:r, url:cfLink(tags,r)})),
+    med:  medRatings.map(r => ({rating:r, url:cfLink(tags,r)})),
+    hard: hardRatings.map(r => ({rating:r, url:cfLink(tags,r)})),
+  };
+}
+
+function ratingLabel(r){ return `CF ~${r}`; }
+
+function openModal(phase, week, day){
+  const sug = buildSuggestions(week.n);
+  document.getElementById('modalTitle').textContent = `Week ${week.n} · ${day.name}`;
+  document.getElementById('modalSub').textContent = `${week.title} — tags: ${sug.label}`;
+
+  const cpNote = document.getElementById('modalCpNote');
+  if(day.checkpoint){
+    cpNote.innerHTML = `<div class="modal-cp"><strong style="color:var(--accent)">${day.checkpoint}</strong>${day.note ? ' — '+day.note : ''}</div>`;
+  } else {
+    cpNote.innerHTML = '';
+  }
+
+  const fill = (elId, list) => {
+    const el = document.getElementById(elId);
+    el.innerHTML = list.map(item => `
+      <a class="plink" href="${item.url}" target="_blank" rel="noopener">
+        <span>Codeforces · ${sug.label}</span>
+        <span class="rating">${ratingLabel(item.rating)}</span>
+      </a>
+    `).join('');
+  };
+  fill('tierEasy', sug.easy);
+  fill('tierMed', sug.med);
+  fill('tierHard', sug.hard);
+
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('overlay').classList.remove('open');
+}
+document.getElementById('modalClose').onclick = closeModal;
+document.getElementById('overlay').onclick = (e)=>{
+  if(e.target.id === 'overlay') closeModal();
+};
+
+/* ===================== STATE ===================== */
+let state = {}; // key -> true
+const STORE_KEY = "ioi-tracker-state";
+
+function dayKey(pi, wi, di){ return `p${pi}-w${wi}-d${di}`; }
+
+function flattenTrackable(){
+  // returns array of {pi,wi,di,checkpoint,rest}
+  const out = [];
+  PLAN.forEach((phase,pi)=>{
+    phase.weeks.forEach((week,wi)=>{
+      week.days.forEach((day,di)=>{
+        if(day.rest) return; // Sundays aren't tracked as tasks
+        out.push({pi,wi,di,checkpoint: !!day.checkpoint});
+      });
+    });
+  });
+  return out;
+}
+const TRACKABLE = flattenTrackable();
+
+async function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      state = JSON.parse(raw);
+    }
+  }catch(e){
+    state = {};
+  }
+}
+async function saveState(){
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  }catch(e){
+    console.error("save failed", e);
+  }
+}
+
+/* ===================== RENDER ===================== */
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  const nav = document.getElementById('phaseNav');
+  nav.innerHTML = '';
+
+  PLAN.forEach((phase, pi)=>{
+    // nav button
+    const total = phase.weeks.reduce((a,w)=>a+w.days.filter(d=>!d.rest).length,0);
+    const done = phase.weeks.reduce((a,w,wi)=>a+w.days.filter((d,di)=>!d.rest && state[dayKey(pi,wi,di)]).length,0);
+    const nb = document.createElement('button');
+    nb.className = 'navbtn' + (done===total?' done':'');
+    nb.textContent = `${pi+1} · ${phase.title.split(' ')[0]}`;
+    nb.onclick = ()=>{ document.getElementById('phase-'+pi).scrollIntoView({behavior:'smooth', block:'start'}); openPhase(pi); };
+    nav.appendChild(nb);
+
+    const phaseEl = document.createElement('section');
+    phaseEl.className = 'phase';
+    phaseEl.id = 'phase-'+pi;
+
+    const head = document.createElement('div');
+    head.className = 'phase-head';
+    head.innerHTML = `
+      <div class="phase-title"><span class="num">${String(pi+1).padStart(2,'0')}</span>${phase.title}<span class="chevron">›</span></div>
+      <div class="phase-meta"><span>${done}/${total}</span><div class="phase-bar"><i style="width:${total?Math.round(done/total*100):0}%"></i></div></div>
+    `;
+    head.onclick = ()=> togglePhase(pi);
+    phaseEl.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'phase-body';
+
+    phase.weeks.forEach((week, wi)=>{
+      const weekEl = document.createElement('div');
+      weekEl.className = 'week';
+      const wTotal = week.days.filter(d=>!d.rest).length;
+      const wDone = week.days.filter((d,di)=>!d.rest && state[dayKey(pi,wi,di)]).length;
+      const wh = document.createElement('div');
+      wh.className = 'week-head';
+      wh.innerHTML = `<div class="week-title"><span class="wk">Week ${week.n}</span> — ${week.title}</div><div class="week-count">${wDone}/${wTotal}</div>`;
+      weekEl.appendChild(wh);
+
+      const daysEl = document.createElement('div');
+      daysEl.className = 'days';
+
+      week.days.forEach((day, di)=>{
+        if(day.rest){
+          const de = document.createElement('div');
+          de.className = 'day';
+          de.style.opacity = '0.55';
+          de.innerHTML = `<div class="day-top"><div class="day-name">${day.name}<small>rest</small></div></div>${day.note?`<div class="cp-note">${day.note}</div>`:''}`;
+          daysEl.appendChild(de);
+          return;
+        }
+        const key = dayKey(pi,wi,di);
+        const checked = !!state[key];
+        const de = document.createElement('div');
+        de.className = 'day' + (checked?' checked':'') + (day.checkpoint?' checkpoint':'');
+        const label = day.checkpoint ? `${day.name}<small>checkpoint</small>` : `${day.name}`;
+        de.innerHTML = `
+          <div class="day-top">
+            <div class="box"></div>
+            <div class="day-name">${label}</div>
+          </div>
+          ${day.checkpoint ? `<div class="cp-note"><strong style="color:var(--accent)">${day.checkpoint}</strong>${day.note?' — '+day.note:''}</div>` : (day.topics? `<ul class="topics">${day.topics.map(t=>`<li>${t}</li>`).join('')}</ul>` : '')}
+        `;
+        de.querySelector('.box').onclick = (e)=>{
+          e.stopPropagation();
+          state[key] = !state[key];
+          saveState();
+          render();
+        };
+        de.style.cursor = 'pointer';
+        de.onclick = ()=> openModal(phase, week, day);
+        daysEl.appendChild(de);
+      });
+
+      weekEl.appendChild(daysEl);
+      body.appendChild(weekEl);
+    });
+
+    phaseEl.appendChild(body);
+    app.appendChild(phaseEl);
+  });
+
+  restoreOpenState();
+  renderStats();
+  renderStreak();
+}
+
+const openPhases = new Set([0]);
+function togglePhase(pi){
+  if(openPhases.has(pi)) openPhases.delete(pi); else openPhases.add(pi);
+  restoreOpenState();
+}
+function openPhase(pi){ openPhases.add(pi); restoreOpenState(); }
+function restoreOpenState(){
+  PLAN.forEach((_,pi)=>{
+    const el = document.getElementById('phase-'+pi);
+    if(!el) return;
+    el.classList.toggle('open', openPhases.has(pi));
+  });
+}
+
+function renderStats(){
+  const totalDays = TRACKABLE.length;
+  const doneDays = TRACKABLE.filter(t=>state[dayKey(t.pi,t.wi,t.di)]).length;
+  const totalCP = TRACKABLE.filter(t=>t.checkpoint).length;
+  const doneCP = TRACKABLE.filter(t=>t.checkpoint && state[dayKey(t.pi,t.wi,t.di)]).length;
+  document.getElementById('statDone').textContent = doneDays;
+  document.getElementById('statTotal').textContent = totalDays;
+  document.getElementById('statPct').textContent = totalDays ? Math.round(doneDays/totalDays*100)+'%' : '0%';
+  document.getElementById('statCP').textContent = `${doneCP}/${totalCP}`;
+}
+
+function renderStreak(){
+  const el = document.getElementById('streak');
+  el.innerHTML = '';
+  TRACKABLE.forEach(t=>{
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const checked = state[dayKey(t.pi,t.wi,t.di)];
+    let lvl = 0;
+    if(checked) lvl = t.checkpoint ? 3 : 2;
+    cell.setAttribute('data-lvl', lvl);
+    cell.title = checked ? 'done' : 'not yet';
+    el.appendChild(cell);
+  });
+}
+
+document.getElementById('resetBtn').onclick = async ()=>{
+  if(!confirm('Clear all logged progress? This cannot be undone.')) return;
+  state = {};
+  await saveState();
+  render();
+};
+
+/* ===================== INIT ===================== */
+(async ()=>{
+  await loadState();
+  render();
+})();
+</script>
+</body>
+</html>
